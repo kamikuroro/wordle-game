@@ -310,6 +310,7 @@
             max-width: 500px;
             padding: 0 2px 6px;
             flex-shrink: 0;
+            touch-action: manipulation;
         }
 
         .keyboard-row {
@@ -336,6 +337,7 @@
             text-transform: uppercase;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
             transition: background 0.15s;
         }
 
@@ -775,9 +777,10 @@
             buildKeyboard();
 
             const params = new URLSearchParams(window.location.search);
-            const urlWord = params.get('word');
+            const encoded = params.get('p');
 
-            if (urlWord) {
+            if (encoded) {
+                try { var urlWord = atob(encoded); } catch (e) { var urlWord = ''; }
                 const w = urlWord.toUpperCase().replace(/[^A-Z]/g, '');
                 if (w.length === WORD_LENGTH) {
                     secretWord = w;
@@ -859,7 +862,7 @@
             secretWord = word;
 
             const base = window.location.origin + window.location.pathname;
-            shareURL = base + '?word=' + encodeURIComponent(word);
+            shareURL = base + '?p=' + encodeURIComponent(btoa(word));
             document.getElementById('share-url').textContent = shareURL;
             showScreen('share');
         }

@@ -29,23 +29,19 @@ tmux capture-pane -t cursor -p
 ```
 
 ### Proof of Concept
-Successfully tested Cursor CLI via tmux:
-```
-wangxinyi@ous-Mac-mini workspace % cd /Users/wangxinyi/Projects/wordle-game && agent --print --trust 'Read index.html, count how many lines are in the file, and output: The file has X lines.' 2>&1
-The file has 621 lines.
-```
+Successfully tested Cursor CLI via tmux - the agent was able to read files and return results.
 
 ---
 
 ## Part 2: Wordle Game Development
 
 ### Project Setup
-- Created project at `/Users/wangxinyi/Projects/wordle-game`
+- Created project locally
 - Single HTML file: `index.html`
 - Initialized git repo and pushed to GitHub
 
 ### GitHub Pages Deployment
-- Created repo: `kamikuroro/wordle-game`
+- Created repo on GitHub
 - Enabled GitHub Pages
 - Live at: https://kamikuroro.github.io/wordle-game/
 
@@ -75,7 +71,7 @@ The file has 621 lines.
 
 #### 5. Shareable Link Mode
 - Generate encoded link for Two Player mode
-- URL parameter: `?p=U1RBUlQ=` (base64 encoded)
+- URL parameter uses base64 encoding
 - Recipient opens link to play with pre-selected word
 
 #### 6. Sound Effects (Web Audio API)

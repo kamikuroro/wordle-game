@@ -127,6 +127,25 @@
             text-transform: uppercase;
         }
         
+        @media (max-width: 400px) {
+            .tile {
+                width: 44px;
+                height: 44px;
+                font-size: 1.5rem;
+            }
+            .key {
+                min-width: 32px;
+                height: 50px;
+                font-size: 0.7rem;
+            }
+            .key.wide {
+                min-width: 50px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+        
         .tile.filled {
             border-color: #565758;
             animation: pop 0.1s;

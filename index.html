@@ -54,9 +54,42 @@
             justify-content: space-between;
         }
 
+        /* ---- Mode Selection Screen ---- */
+        #mode-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            margin-top: 48px;
+        }
+
+        #mode-screen h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: 260px;
+        }
+
+        .mode-buttons .btn {
+            width: 100%;
+            text-align: center;
+        }
+
+        .mode-desc {
+            color: #818384;
+            font-size: 0.75rem;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
         /* ---- Setup Screen ---- */
         #setup-screen {
-            display: flex;
+            display: none;
             flex-direction: column;
             align-items: center;
             gap: 18px;
@@ -111,6 +144,38 @@
 
         .btn-secondary:hover {
             background: #525254;
+        }
+
+        /* ---- Share Link Section ---- */
+        #share-section {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            margin-top: 48px;
+        }
+
+        #share-section p {
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .share-url {
+            font-size: 0.8rem;
+            color: #6aaa84;
+            background: #1a1a1b;
+            border: 1px solid #3a3a3c;
+            border-radius: 4px;
+            padding: 10px 16px;
+            word-break: break-all;
+            text-align: center;
+            max-width: 340px;
+            user-select: all;
+        }
+
+        .share-actions {
+            display: flex;
+            gap: 12px;
         }
 
         .instructions {
@@ -470,22 +535,46 @@
 <body>
     <header>
         <h1>WORDLE</h1>
-        <p class="subtitle">Two Player</p>
+        <p class="subtitle" id="subtitle"></p>
     </header>
 
     <div class="game-container">
-        <div id="setup-screen">
-            <p>Player 1: Enter a 5-letter word</p>
-            <input type="password" id="secret-input" maxlength="5" placeholder="_____" autocomplete="off" spellcheck="false">
-            <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+        <div id="mode-screen">
+            <h2>Choose a Mode</h2>
+            <div class="mode-buttons">
+                <button class="btn btn-primary" onclick="chooseSinglePlayer()">
+                    Single Player
+                    <div class="mode-desc">Guess a random word</div>
+                </button>
+                <button class="btn btn-secondary" onclick="chooseTwoPlayer()">
+                    Two Player
+                    <div class="mode-desc">Set a word for a friend</div>
+                </button>
+            </div>
             <div class="instructions">
                 <h3>How to Play</h3>
-                <p>Player 1 sets a secret word. Player 2 guesses it in 6 tries.</p>
+                <p>Guess the secret word in 6 tries.</p>
                 <p style="margin-top:10px">
                     <span class="color-hint" style="background:#6aaa84"></span><strong>Green</strong> — right letter, right spot<br>
                     <span class="color-hint" style="background:#c9b458"></span><strong>Yellow</strong> — right letter, wrong spot<br>
                     <span class="color-hint" style="background:#3a3a3c"></span><strong>Gray</strong> — letter not in the word
                 </p>
+            </div>
+        </div>
+
+        <div id="setup-screen">
+            <p>Enter a 5-letter word for your friend</p>
+            <input type="password" id="secret-input" maxlength="5" placeholder="_____" autocomplete="off" spellcheck="false">
+            <button class="btn btn-primary" onclick="confirmTwoPlayerWord()">Set Word</button>
+            <button class="btn btn-secondary" onclick="backToMode()">Back</button>
+        </div>
+
+        <div id="share-section">
+            <p>Word is set! Share this link<br>with your friend:</p>
+            <div class="share-url" id="share-url"></div>
+            <div class="share-actions">
+                <button class="btn btn-primary" onclick="copyShareLink()">Copy Link</button>
+                <button class="btn btn-secondary" onclick="startGameFromShare()">Play Myself</button>
             </div>
         </div>
 
@@ -517,6 +606,8 @@
         let currentTile = 0;
         let gameOver = false;
         let isRevealing = false;
+        let gameMode = '';
+        let shareURL = '';
 
         const KEYS = [
             ['Q','W','E','R','T','Y','U','I','O','P'],
@@ -524,15 +615,269 @@
             ['ENTER','Z','X','C','V','B','N','M','⌫']
         ];
 
+        const WORD_LIST = [
+            'ABOUT','ABOVE','ABUSE','ACTOR','ADAPT','ADMIT','ADOPT','ADULT','AFTER','AGAIN',
+            'AGENT','AGREE','AHEAD','ALARM','ALBUM','ALERT','ALIEN','ALIGN','ALIVE','ALLEY',
+            'ALLOW','ALONE','ALONG','ALTER','AMONG','ANGEL','ANGER','ANGLE','ANGRY','ANIME',
+            'ANKLE','APART','APPLE','APPLY','ARENA','ARGUE','ARISE','ARMOR','ARRAY','ASIDE',
+            'ASSET','AVOID','AWARD','AWARE','BADLY','BASIC','BASIS','BEACH','BEGAN','BEGIN',
+            'BEING','BELOW','BENCH','BERRY','BIRTH','BLACK','BLADE','BLAME','BLANK','BLAST',
+            'BLAZE','BLEED','BLEND','BLIND','BLOCK','BLOOD','BLOOM','BLOWN','BOARD','BONUS',
+            'BOOTH','BOUND','BRAIN','BRAND','BRAVE','BREAD','BREAK','BREED','BRICK','BRIEF',
+            'BRING','BROAD','BROKE','BROOK','BROWN','BRUSH','BUILD','BUNCH','BURST','BUYER',
+            'CABIN','CABLE','CAMEL','CANDY','CARRY','CATCH','CAUSE','CHAIN','CHAIR','CHARM',
+            'CHART','CHASE','CHEAP','CHECK','CHEEK','CHEER','CHESS','CHEST','CHIEF','CHILD',
+            'CHINA','CHUNK','CLAIM','CLASS','CLEAN','CLEAR','CLICK','CLIFF','CLIMB','CLING',
+            'CLOCK','CLONE','CLOSE','CLOUD','COACH','COAST','COLOR','COMET','COMMA','CORAL',
+            'COULD','COUNT','COURT','COVER','CRACK','CRAFT','CRANE','CRASH','CRAZY','CREAM',
+            'CREEK','CRIME','CRISP','CROSS','CROWD','CROWN','CRUEL','CRUSH','CURVE','CYCLE',
+            'DAILY','DANCE','DEATH','DEBUG','DECAY','DELAY','DELTA','DENSE','DEPTH','DERBY',
+            'DEVIL','DIARY','DIRTY','DITCH','DOING','DOUBT','DOUGH','DRAFT','DRAIN','DRAKE',
+            'DRAMA','DRANK','DRAWN','DREAM','DRESS','DRIED','DRIFT','DRILL','DRINK','DRIVE',
+            'DRONE','DROVE','DRUNK','DRYER','DYING','EAGLE','EARLY','EARTH','EIGHT','ELDER',
+            'ELECT','ELITE','EMAIL','EMBER','EMPTY','ENEMY','ENJOY','ENTER','ENTRY','EQUAL',
+            'ERROR','EVENT','EVERY','EXACT','EXAMS','EXIST','EXTRA','FABLE','FACET','FAITH',
+            'FALSE','FANCY','FATAL','FAULT','FEAST','FENCE','FEVER','FIBER','FIELD','FIFTH',
+            'FIFTY','FIGHT','FINAL','FIRST','FIXED','FLAGS','FLAME','FLASH','FLEET','FLESH',
+            'FLOAT','FLOOD','FLOOR','FLORA','FLOUR','FLUID','FLUSH','FOCAL','FOCUS','FORCE',
+            'FORGE','FORTH','FORUM','FOUND','FRAME','FRANK','FRAUD','FRESH','FRONT','FROST',
+            'FROZE','FRUIT','FULLY','FUNNY','GHOST','GIANT','GIVEN','GLARE','GLASS','GLEAM',
+            'GLOBE','GLOOM','GLORY','GLOSS','GLOVE','GOING','GRACE','GRADE','GRAIN','GRAND',
+            'GRANT','GRAPE','GRAPH','GRASP','GRASS','GRAVE','GREAT','GREEN','GREET','GRIEF',
+            'GRILL','GRIND','GROAN','GROOM','GROSS','GROUP','GROVE','GROWN','GUARD','GUESS',
+            'GUEST','GUIDE','GUILD','GUILT','HABIT','HAPPY','HARSH','HAUNT','HAVEN','HEART',
+            'HEAVY','HELLO','HENCE','HERBS','HIKER','HOBBY','HOMER','HONEY','HONOR','HORSE',
+            'HOTEL','HOUSE','HUMAN','HUMOR','IDEAL','IMAGE','IMPLY','INDEX','INDIE','INFER',
+            'INNER','INPUT','IRONY','ISSUE','IVORY','JELLY','JEWEL','JOINT','JOKER','JUDGE',
+            'JUICE','KARMA','KAYAK','KHAKI','KNIFE','KNOCK','KNOWN','LABEL','LABOR','LANCE',
+            'LARGE','LASER','LATER','LAUGH','LAYER','LEARN','LEASE','LEAST','LEAVE','LEGAL',
+            'LEMON','LEVEL','LIGHT','LIMIT','LINEN','LIVER','LOCAL','LODGE','LOGIC','LOGIN',
+            'LOOSE','LOVER','LOWER','LOYAL','LUCKY','LUNAR','LUNCH','LYING','MAGIC','MAJOR',
+            'MAKER','MANGA','MANOR','MAPLE','MARCH','MATCH','MAYOR','MEDAL','MEDIA','MERCY',
+            'MERGE','METAL','METER','MIGHT','MINOR','MINUS','MIXED','MODEL','MONEY','MONTH',
+            'MORAL','MOTOR','MOUNT','MOUSE','MOUTH','MOVED','MOVIE','MUSIC','NAIVE','NERVE',
+            'NEVER','NEWLY','NIGHT','NINJA','NOBLE','NOISE','NORTH','NOTED','NOVEL','NURSE',
+            'NYLON','OCCUR','OCEAN','OFFER','OFTEN','OLIVE','OMEGA','ONSET','OPERA','ORBIT',
+            'ORDER','OTHER','OUTER','OUTDO','OWNER','OXIDE','OZONE','PAINT','PANEL','PANIC',
+            'PAPER','PARTY','PASTA','PATCH','PAUSE','PEACE','PEARL','PENNY','PHASE','PHONE',
+            'PHOTO','PIANO','PIECE','PILOT','PINCH','PITCH','PIXEL','PIZZA','PLACE','PLAIN',
+            'PLANE','PLANT','PLATE','PLAZA','PLEAD','PLUCK','PLUMB','PLUME','PLUMP','POINT',
+            'POLAR','POUND','POWER','PRESS','PRICE','PRIDE','PRIME','PRINCE','PRINT','PRIOR',
+            'PRIZE','PROBE','PROOF','PROUD','PROVE','PROXY','PULSE','PUNCH','PUPIL','PURSE',
+            'QUEEN','QUERY','QUEST','QUEUE','QUICK','QUIET','QUOTA','QUOTE','RADAR','RADIO',
+            'RAISE','RALLY','RANCH','RANGE','RAPID','RAVEN','REACH','REACT','REALM','REBEL',
+            'REIGN','RELAX','RENEW','RIDER','RIDGE','RIFLE','RIGHT','RIGID','RISEN','RISKY',
+            'RIVAL','RIVER','ROBIN','ROBOT','ROCKY','ROGUE','ROUGE','ROUGH','ROUND','ROUTE',
+            'ROYAL','RUGBY','RULER','RURAL','SAINT','SALAD','SAUCE','SCALE','SCARE','SCENE',
+            'SCENT','SCOPE','SCORE','SCOUT','SCREW','SEIZE','SENSE','SERVE','SETUP','SEVEN',
+            'SHADE','SHAKE','SHALL','SHAME','SHAPE','SHARE','SHARK','SHARP','SHAVE','SHEEP',
+            'SHEER','SHEET','SHELF','SHELL','SHIFT','SHINE','SHIRT','SHOCK','SHORE','SHORT',
+            'SHOUT','SIGHT','SILLY','SINCE','SIXTY','SIZED','SKILL','SKULL','SLASH','SLATE',
+            'SLAVE','SLEEP','SLICE','SLIDE','SLOPE','SMART','SMELL','SMILE','SMITH','SMOKE',
+            'SNACK','SNAKE','SOLAR','SOLID','SOLVE','SONIC','SORRY','SOUTH','SPACE','SPARE',
+            'SPARK','SPEAK','SPEED','SPELL','SPEND','SPENT','SPICE','SPIKE','SPINE','SPOKE',
+            'SPOON','SPORT','SPRAY','SQUAD','STACK','STAFF','STAGE','STAIN','STAKE','STALE',
+            'STALL','STAMP','STAND','STARE','START','STATE','STAYS','STEAK','STEAL','STEAM',
+            'STEEL','STEEP','STEER','STERN','STICK','STIFF','STILL','STOCK','STOLE','STONE',
+            'STOOD','STORE','STORM','STORY','STOVE','STRAP','STRAW','STRAY','STRIP','STUCK',
+            'STUDY','STUFF','STUMP','STYLE','SUGAR','SUITE','SUPER','SURGE','SWAMP','SWEAR',
+            'SWEAT','SWEEP','SWEET','SWEPT','SWIFT','SWING','SWIRL','SWORD','SWORE','SWORN',
+            'TABLE','TASTE','TEACH','TEETH','TEMPO','TENSE','THEFT','THEME','THICK','THIEF',
+            'THING','THINK','THIRD','THOSE','THREE','THREW','THROW','THUMB','TIDAL','TIGER',
+            'TIGHT','TIMER','TIRED','TITLE','TODAY','TOKEN','TOPIC','TOTAL','TOUCH','TOUGH',
+            'TOWEL','TOWER','TOXIC','TRACE','TRACK','TRADE','TRAIL','TRAIN','TRAIT','TRASH',
+            'TREAT','TREND','TRIAL','TRIBE','TRICK','TRIED','TROOP','TRUCK','TRULY','TRUMP',
+            'TRUNK','TRUST','TRUTH','TUMOR','TUNER','TWICE','TWIST','ULTRA','UNCLE','UNDER',
+            'UNION','UNITE','UNITY','UNTIL','UPPER','UPSET','URBAN','USAGE','USUAL','UTTER',
+            'VALID','VALUE','VALVE','VAULT','VERSE','VIDEO','VIGOR','VINYL','VIOLA','VIRAL',
+            'VIRUS','VISIT','VITAL','VIVID','VOCAL','VODKA','VOICE','VOTER','WAIST','WASTE',
+            'WATCH','WATER','WEARY','WEAVE','WEDGE','WEIRD','WHEAT','WHEEL','WHERE','WHICH',
+            'WHILE','WHITE','WHOLE','WHOSE','WIDTH','WITCH','WOMAN','WOMEN','WORLD','WORRY',
+            'WORSE','WORST','WORTH','WOULD','WOUND','WRATH','WRIST','WRITE','WRONG','WROTE',
+            'YACHT','YIELD','YOUNG','YOUTH','ZEBRA'
+        ];
+
+        /* ---- Web Audio API Sound Engine ---- */
+        let audioCtx = null;
+
+        function getAudioCtx() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playKeyClick() {
+            try {
+                const ctx = getAudioCtx();
+                const bufferSize = ctx.sampleRate * 0.012;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    const env = 1 - (i / bufferSize);
+                    data[i] = (Math.random() * 2 - 1) * env * env * 0.3;
+                }
+
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 3800;
+                filter.Q.value = 1.2;
+
+                const gain = ctx.createGain();
+                gain.gain.value = 0.4;
+
+                source.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+                source.start();
+            } catch (e) {}
+        }
+
+        function playRevealTone(status) {
+            try {
+                const ctx = getAudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                if (status === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.value = 880;
+                    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                } else if (status === 'present') {
+                    osc.type = 'triangle';
+                    osc.frequency.value = 587;
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+                } else {
+                    osc.type = 'sine';
+                    osc.frequency.value = 220;
+                    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+                }
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {}
+        }
+
+        /* ---- Initialization ---- */
         function init() {
             buildBoard();
             buildKeyboard();
+
+            const params = new URLSearchParams(window.location.search);
+            const urlWord = params.get('word');
+
+            if (urlWord) {
+                const w = urlWord.toUpperCase().replace(/[^A-Z]/g, '');
+                if (w.length === WORD_LENGTH) {
+                    secretWord = w;
+                    gameMode = 'link';
+                    showScreen('game');
+                    setSubtitle('Two Player');
+                    window.history.replaceState({}, '', window.location.pathname);
+                    document.addEventListener('keydown', onPhysicalKey);
+                    return;
+                }
+            }
+
+            showScreen('mode');
+        }
+
+        function setSubtitle(text) {
+            document.getElementById('subtitle').textContent = text;
+        }
+
+        function showScreen(name) {
+            document.getElementById('mode-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('share-section').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'none';
+
+            if (name === 'mode') {
+                document.getElementById('mode-screen').style.display = 'flex';
+                setSubtitle('');
+            } else if (name === 'setup') {
+                document.getElementById('setup-screen').style.display = 'flex';
+            } else if (name === 'share') {
+                document.getElementById('share-section').style.display = 'flex';
+            } else if (name === 'game') {
+                document.getElementById('game-screen').style.display = 'flex';
+            }
+        }
+
+        /* ---- Mode Selection ---- */
+        function chooseSinglePlayer() {
+            gameMode = 'single';
+            secretWord = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+            setSubtitle('Single Player');
+            showScreen('game');
+            document.addEventListener('keydown', onPhysicalKey);
+        }
+
+        function chooseTwoPlayer() {
+            gameMode = 'two';
+            setSubtitle('Two Player');
+            showScreen('setup');
             const input = document.getElementById('secret-input');
-            input.addEventListener('keydown', e => {
-                if (e.key === 'Enter') startGame();
+            input.value = '';
+            input.focus();
+            input.addEventListener('keydown', function handler(e) {
+                if (e.key === 'Enter') {
+                    confirmTwoPlayerWord();
+                    input.removeEventListener('keydown', handler);
+                }
             });
         }
 
+        function backToMode() {
+            showScreen('mode');
+        }
+
+        function confirmTwoPlayerWord() {
+            const input = document.getElementById('secret-input');
+            const word = input.value.trim().toUpperCase();
+
+            if (word.length !== WORD_LENGTH) {
+                toast(`Enter a ${WORD_LENGTH}-letter word`);
+                return;
+            }
+            if (!/^[A-Z]+$/.test(word)) {
+                toast('Letters only');
+                return;
+            }
+
+            secretWord = word;
+
+            const base = window.location.origin + window.location.pathname;
+            shareURL = base + '?word=' + encodeURIComponent(word);
+            document.getElementById('share-url').textContent = shareURL;
+            showScreen('share');
+        }
+
+        function copyShareLink() {
+            navigator.clipboard.writeText(shareURL).then(() => {
+                toast('Link copied!');
+            }).catch(() => {
+                toast('Copy the link manually');
+            });
+        }
+
+        function startGameFromShare() {
+            showScreen('game');
+            document.addEventListener('keydown', onPhysicalKey);
+        }
+
+        /* ---- Board & Keyboard Building ---- */
         function buildBoard() {
             const board = document.getElementById('board');
             board.innerHTML = '';
@@ -569,25 +914,7 @@
             });
         }
 
-        function startGame() {
-            const input = document.getElementById('secret-input');
-            const word = input.value.trim().toUpperCase();
-
-            if (word.length !== WORD_LENGTH) {
-                toast(`Enter a ${WORD_LENGTH}-letter word`);
-                return;
-            }
-            if (!/^[A-Z]+$/.test(word)) {
-                toast('Letters only');
-                return;
-            }
-
-            secretWord = word;
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'flex';
-            document.addEventListener('keydown', onPhysicalKey);
-        }
-
+        /* ---- Input Handling ---- */
         function onPhysicalKey(e) {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
             const k = e.key;
@@ -605,6 +932,7 @@
                     const tile = getTile(currentRow, currentTile);
                     tile.textContent = '';
                     tile.classList.remove('filled');
+                    playKeyClick();
                 }
             } else if (key === 'ENTER') {
                 submitGuess();
@@ -613,6 +941,7 @@
                 tile.textContent = key;
                 tile.classList.add('filled');
                 currentTile++;
+                playKeyClick();
             }
         }
 
@@ -620,6 +949,7 @@
             return document.getElementById(`tile-${r}-${c}`);
         }
 
+        /* ---- Guess Logic ---- */
         function submitGuess() {
             if (currentTile < WORD_LENGTH) {
                 toast('Not enough letters');
@@ -690,6 +1020,7 @@
                     setTimeout(() => {
                         tile.classList.add(result[i]);
                         updateKey(guess[i], result[i]);
+                        playRevealTone(result[i]);
                     }, FLIP_MS / 2);
                 }, i * TILE_DELAY);
             }
@@ -708,6 +1039,7 @@
             }
         }
 
+        /* ---- Animations ---- */
         function shakeRow(row) {
             const rowEl = document.getElementById(`row-${row}`);
             rowEl.style.animation = 'none';
@@ -724,6 +1056,7 @@
             }
         }
 
+        /* ---- Toast ---- */
         function toast(text, duration) {
             duration = duration || 1500;
             const el = document.getElementById('message');
@@ -733,6 +1066,7 @@
             el._timer = setTimeout(() => el.classList.remove('show'), duration);
         }
 
+        /* ---- Game End ---- */
         function endGame(won) {
             gameOver = true;
             document.removeEventListener('keydown', onPhysicalKey);
@@ -760,9 +1094,6 @@
 
         function resetGame() {
             document.getElementById('game-over').classList.remove('show');
-            document.getElementById('game-screen').style.display = 'none';
-            document.getElementById('setup-screen').style.display = 'flex';
-            document.getElementById('secret-input').value = '';
             document.removeEventListener('keydown', onPhysicalKey);
 
             secretWord = '';
@@ -770,9 +1101,12 @@
             currentTile = 0;
             gameOver = false;
             isRevealing = false;
+            gameMode = '';
+            shareURL = '';
 
             buildBoard();
             buildKeyboard();
+            showScreen('mode');
         }
 
         init();

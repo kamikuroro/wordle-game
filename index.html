@@ -6537,6 +6537,10 @@
                 toast('Letters only');
                 return;
             }
+            if (!validateWord(word)) {
+                toast('Not a valid word');
+                return;
+            }
 
             secretWord = word;
 
@@ -6632,11 +6636,7 @@
         }
 
         /* ---- Guess Logic ---- */
-        function validateWord(word) {
-            return WORD_LIST.includes(word);
-        }
-
-        async function submitGuess() {
+        function submitGuess() {
             if (currentTile < WORD_LENGTH) {
                 toast('Not enough letters');
                 shakeRow(currentRow);
@@ -6648,8 +6648,7 @@
                 guess += getTile(currentRow, i).textContent;
             }
 
-            // Validate word against dictionary
-            if (!validateWord(guess)) {
+            if (!VALID_GUESSES.has(guess)) {
                 toast('Not in word list');
                 shakeRow(currentRow);
                 return;

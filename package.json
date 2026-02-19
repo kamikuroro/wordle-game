@@ -1,6 +1,0 @@
-{
-  "name": "wordle-game",
-  "scripts": {
-    "gen": "node gen.mjs"
-  }
-}

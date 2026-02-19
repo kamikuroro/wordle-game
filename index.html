@@ -956,9 +956,12 @@
         async function validateWord(word) {
             try {
                 const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
-                return response.ok;
+                if (response.ok) return true;
+                // Fallback to hardcoded list if API fails
+                return WORD_LIST.includes(word);
             } catch (e) {
-                return false;
+                // Fallback to hardcoded list on error
+                return WORD_LIST.includes(word);
             }
         }
 

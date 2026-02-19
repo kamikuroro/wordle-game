@@ -953,7 +953,16 @@
         }
 
         /* ---- Guess Logic ---- */
-        function submitGuess() {
+        async function validateWord(word) {
+            try {
+                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
+                return response.ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function submitGuess() {
             if (currentTile < WORD_LENGTH) {
                 toast('Not enough letters');
                 shakeRow(currentRow);
@@ -965,8 +974,11 @@
                 guess += getTile(currentRow, i).textContent;
             }
 
-            // Validate word against dictionary
-            if (!WORD_LIST.includes(guess)) {
+            // Validate word against dictionary API
+            toast('Checking...');
+            const isValid = await validateWord(guess);
+            
+            if (!isValid) {
                 toast('Not in word list');
                 shakeRow(currentRow);
                 return;

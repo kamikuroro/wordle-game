@@ -6525,7 +6525,16 @@
             showScreen('mode');
         }
 
-        function confirmTwoPlayerWord() {
+        async function validateWord(word) {
+            try {
+                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
+                return response.ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function confirmTwoPlayerWord() {
             const input = document.getElementById('secret-input');
             const word = input.value.trim().toUpperCase();
 
@@ -6537,7 +6546,11 @@
                 toast('Letters only');
                 return;
             }
-            if (!validateWord(word)) {
+            
+            toast('Checking...');
+            const isValid = await validateWord(word);
+            
+            if (!isValid) {
                 toast('Not a valid word');
                 return;
             }
@@ -6636,7 +6649,7 @@
         }
 
         /* ---- Guess Logic ---- */
-        function submitGuess() {
+        async function submitGuess() {
             if (currentTile < WORD_LENGTH) {
                 toast('Not enough letters');
                 shakeRow(currentRow);
@@ -6648,7 +6661,11 @@
                 guess += getTile(currentRow, i).textContent;
             }
 
-            if (!VALID_GUESSES.has(guess)) {
+            // Validate against dictionary API
+            toast('Checking...');
+            const isValid = await validateWord(guess);
+            
+            if (!isValid) {
                 toast('Not in word list');
                 shakeRow(currentRow);
                 return;

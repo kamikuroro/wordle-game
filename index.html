@@ -6530,12 +6530,14 @@
                 const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
                 return response.ok;
             } catch (e) {
+                console.error('Validation error:', e);
                 return false;
             }
         }
 
         async function confirmTwoPlayerWord() {
             const input = document.getElementById('secret-input');
+            const btn = document.querySelector('#two-player-screen .btn-primary');
             const word = input.value.trim().toUpperCase();
 
             if (word.length !== WORD_LENGTH) {
@@ -6547,11 +6549,19 @@
                 return;
             }
             
-            toast('Checking...');
+            // Disable button during validation
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            toast('Checking word...');
+            
             const isValid = await validateWord(word);
             
+            btn.disabled = false;
+            btn.textContent = 'Set Word';
+            
             if (!isValid) {
-                toast('Not a valid word');
+                toast('Not a valid English word');
+                input.focus();
                 return;
             }
 

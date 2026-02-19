@@ -965,6 +965,13 @@
                 guess += getTile(currentRow, i).textContent;
             }
 
+            // Validate word against dictionary
+            if (!WORD_LIST.includes(guess)) {
+                toast('Not in word list');
+                shakeRow(currentRow);
+                return;
+            }
+
             const result = evaluateGuess(guess, secretWord);
             isRevealing = true;
             revealRow(currentRow, guess, result, () => {
